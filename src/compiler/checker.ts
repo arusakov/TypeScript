@@ -14862,7 +14862,8 @@ namespace ts {
                         // If one or both operands are of the String primitive type, the result is of the String primitive type.
                         resultType = stringType;
                     }
-                    else if (leftTypeContainsAny || rightTypeContainsAny) {
+
+                    if (leftTypeContainsAny || rightTypeContainsAny) {
                         // NOTE: unknown type here denotes error type. Old compiler treated this case as any type so do we.
                         resultType = leftType === unknownType || rightType === unknownType ? unknownType : anyType;
                     }
