@@ -14833,27 +14833,43 @@ namespace ts {
                     leftType = getNonNullableType(leftType);
                     rightType = getNonNullableType(rightType);
 
+                    const leftTypeContainsAny = isTypeContainsAny(leftType);
+                    const rightTypeContainsAny = isTypeContainsAny(rightType);
+
+                    const leftTypeContainsNumber = isTypeContainsNumber(leftType);
+                    const rightTypeContainsNumber = isTypeContainsNumber(rightType);
+
+                    const leftTypeContainsString = isTypeContainsString(leftType);
+                    const rightTypeContainsString = isTypeContainsString(rightType);
+
                     let resultType: Type;
-                    if (isTypeOfKind(leftType, TypeFlags.NumberLike) && isTypeOfKind(rightType, TypeFlags.NumberLike)) {
+                    if (leftTypeContainsNumber && leftTypeContainsString) {
+                        if (rightTypeContainsNumber || rightTypeContainsString) {
+                            resultType = rightTypeContainsNumber ? getUnionType([numberType, stringType]) : stringType;
+                        }
+                    }
+                    else if (rightTypeContainsNumber && rightTypeContainsString) {
+                        if (leftTypeContainsNumber || leftTypeContainsString) {
+                            resultType = leftTypeContainsNumber ? getUnionType([numberType, stringType]) : stringType;
+                        }
+                    }
+                    else if (leftTypeContainsNumber && rightTypeContainsNumber) {
                         // Operands of an enum type are treated as having the primitive type Number.
                         // If both operands are of the Number primitive type, the result is of the Number primitive type.
                         resultType = numberType;
                     }
-                    else {
-                        if (isTypeOfKind(leftType, TypeFlags.StringLike) || isTypeOfKind(rightType, TypeFlags.StringLike)) {
-                            // If one or both operands are of the String primitive type, the result is of the String primitive type.
-                            resultType = stringType;
-                        }
-                        else if (isTypeAny(leftType) || isTypeAny(rightType)) {
-                            // Otherwise, the result is of type Any.
-                            // NOTE: unknown type here denotes error type. Old compiler treated this case as any type so do we.
-                            resultType = leftType === unknownType || rightType === unknownType ? unknownType : anyType;
-                        }
+                    else if (leftTypeContainsString || rightTypeContainsString) {
+                        // If one or both operands are of the String primitive type, the result is of the String primitive type.
+                        resultType = stringType;
+                    }
+                    else if (leftTypeContainsAny || rightTypeContainsAny) {
+                        // NOTE: unknown type here denotes error type. Old compiler treated this case as any type so do we.
+                        resultType = leftType === unknownType || rightType === unknownType ? unknownType : anyType;
+                    }
 
-                        // Symbols are not allowed at all in arithmetic expressions
-                        if (resultType && !checkForDisallowedESSymbolOperand(operator)) {
-                            return resultType;
-                        }
+                    // Symbols are not allowed at all in arithmetic expressions
+                    if (resultType && !checkForDisallowedESSymbolOperand(operator)) {
+                        return resultType;
                     }
 
                     if (!resultType) {
@@ -14911,6 +14927,24 @@ namespace ts {
                         error(left, Diagnostics.Left_side_of_comma_operator_is_unused_and_has_no_side_effects);
                     }
                     return rightType;
+            }
+
+            function isTypeContainsAny(type: Type): boolean {
+                return isTypeOfKind(type, TypeFlags.Union) ?
+                    (type as UnionType).types && ((type as UnionType).types as TypeSet).containsAny :
+                    isTypeAny(type);
+            }
+
+            function isTypeContainsString(type: Type): boolean {
+                return isTypeOfKind(type, TypeFlags.Union) ?
+                    (type as UnionType).types && ((type as UnionType).types as TypeSet).containsString :
+                    isTypeOfKind(type, TypeFlags.StringLike);
+            }
+
+            function isTypeContainsNumber(type: Type): boolean {
+                return isTypeOfKind(type, TypeFlags.Union) ?
+                    (type as UnionType).types && ((type as UnionType).types as TypeSet).containsNumber :
+                    isTypeOfKind(type, TypeFlags.NumberLike);
             }
 
             // Return true if there was no error, false if there was an error.
