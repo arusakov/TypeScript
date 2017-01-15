@@ -1,0 +1,14 @@
+{
+    "compilerOptions": {
+        "target": "es2015",
+        "outFile": "./bundle.js",
+        "declaration": true,
+        "declarationDir": "./dec",
+        "types": [
+            
+        ]
+    },
+    "files": [
+        "1.ts"
+    ]
+}
